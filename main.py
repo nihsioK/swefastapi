@@ -19,6 +19,12 @@ from schemas import FuelingRequest, FuelingRequestCreate, LoginCredentials
 from passlib.context import CryptContext
 from auth import authenticate_user, create_access_token, get_current_user, Token, ACCESS_TOKEN_EXPIRE_MINUTES
 from fastapi import APIRouter
+from models import AuctionVehicle as AuctionVehicle
+from schemas import AuctionVehicleResponse as AuctionVehicleResponse, AuctionVehicleCreate as AuctionVehicleCreate
+from fastapi import UploadFile, File, Form, Path
+from fastapi.middleware.cors import CORSMiddleware
+
+
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -39,8 +45,17 @@ tasks_router = APIRouter(tags=["Tasks"])
 fueling_router = APIRouter(tags=["Fueling Requests"])
 drivers_router = APIRouter(tags=["Drivers"])
 authorization = APIRouter(tags=["Authorization"])
+auction = APIRouter(tags=["Auction"])
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 # Dependency for getting the DB session
 def get_db():
@@ -290,14 +305,56 @@ def delete_task(task_id: int, db: Session = Depends(get_db), current_user: DBUse
 
 
 # Fueling Requests
-@fueling_router.get("/fueling_requests/", response_model=List[FuelingRequest])
-def read_fueling_requests(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), current_user: DBUser = Depends(get_current_user)):
-    fueling_requests = db.query(DBFuelingRequest).offset(skip).limit(limit).all()
-    return fueling_requests
+# @fueling_router.get("/fueling_requests/", response_model=List[FuelingRequest])
+# def read_fueling_requests(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), current_user: DBUser = Depends(get_current_user)):
+#     fueling_requests = db.query(DBFuelingRequest).offset(skip).limit(limit).all()
+#     return fueling_requests
+@fueling_router.post("/fueling_requests/", response_model=FuelingRequest)
+async def create_fueling_request(
+    before_fueling_image: UploadFile = File(...), 
+    after_fueling_image: UploadFile = File(...),
+    amount: float = Form(...),
+    gas_station: str = Form(...),
+    notes: str = Form(...),
+    total_cost: float = Form(...),
+    vehicle_id: int = Form(...),
+    status: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: DBUser = Depends(get_current_user)
+):
+    before_image_data = await before_fueling_image.read()
+    after_image_data = await after_fueling_image.read()
+
+    db_fueling_request = DBFuelingRequest(
+        before_fueling_image=before_image_data,
+        after_fueling_image=after_image_data,
+        amount=amount,
+        gas_station=gas_station,
+        notes=notes,
+        total_cost=total_cost,
+        vehicle_id=vehicle_id,
+        status=status,
+        # Handle other fields accordingly
+    )
+    db.add(db_fueling_request)
+    db.commit()
+    db.refresh(db_fueling_request)
+    return db_fueling_request
 
 @fueling_router.get("/fueling_requests/{fueling_request_id}", response_model=FuelingRequest)
-def read_fueling_request(fueling_request_id: int, db: Session = Depends(get_db), current_user: DBUser = Depends(get_current_user)):
+def read_fueling_request(
+    fueling_request_id: int = Path(..., description="The ID of the fueling request to retrieve"),
+    db: Session = Depends(get_db), 
+    current_user: DBUser = Depends(get_current_user)
+):
     fueling_request = db.query(DBFuelingRequest).filter(DBFuelingRequest.id == fueling_request_id).first()
+    if fueling_request is None:
+        raise HTTPException(status_code=404, detail="Fueling request not found")
+    return fueling_request
+
+@fueling_router.get("/fueling_requests/", response_model=FuelingRequest)
+def read_fueling_request (db: Session = Depends(get_db), current_user: DBUser = Depends(get_current_user)):
+    fueling_request = db.query(DBFuelingRequest).first()
     if fueling_request is None:
         raise HTTPException(status_code=404, detail="Fueling request not found")
     return fueling_request
@@ -382,6 +439,52 @@ def delete_driver(user_id: int, db: Session = Depends(get_db), current_user: DBU
     return driver
 
 
+
+#auction
+@auction.post("/auction-vehicles/", response_model=AuctionVehicleResponse)
+def create_auction_vehicle(auction_vehicle: AuctionVehicleCreate, db: Session = Depends(get_db),):
+    db_auction_vehicle = AuctionVehicle(**auction_vehicle.dict())
+    db.add(db_auction_vehicle)
+    db.commit()
+    db.refresh(db_auction_vehicle)
+    return db_auction_vehicle
+
+# GET endpoint to read all auction vehicles
+@auction.get("/auction-vehicles/", response_model=List[AuctionVehicleResponse])
+def read_auction_vehicles(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    auction_vehicles = db.query(AuctionVehicle).offset(skip).limit(limit).all()
+    return auction_vehicles
+
+# GET endpoint to read a single auction vehicle by ID
+@auction.get("/auction-vehicles/{id}", response_model=AuctionVehicleResponse)
+def read_auction_vehicle(id: int, db: Session = Depends(get_db)):
+    auction_vehicle = db.query(AuctionVehicle).filter(AuctionVehicle.id == id).first()
+    if auction_vehicle is None:
+        raise HTTPException(status_code=404, detail="Auction vehicle not found")
+    return auction_vehicle
+
+# PUT endpoint to update an auction vehicle
+@auction.put("/auction-vehicles/{id}", response_model=AuctionVehicleResponse)
+def update_auction_vehicle(id: int, updated_vehicle: AuctionVehicleCreate, db: Session = Depends(get_db)):
+    auction_vehicle = db.query(AuctionVehicle).filter(AuctionVehicle.id == id).first()
+    if auction_vehicle is None:
+        raise HTTPException(status_code=404, detail="Auction vehicle not found")
+    for key, value in updated_vehicle.dict().items():
+        setattr(auction_vehicle, key, value) if value is not None else None
+    db.commit()
+    return auction_vehicle
+
+# DELETE endpoint to delete an auction vehicle
+@auction.delete("/auction-vehicles/{id}", response_model=AuctionVehicleResponse)
+def delete_auction_vehicle(id: int, db: Session = Depends(get_db)):
+    auction_vehicle = db.query(AuctionVehicle).filter(AuctionVehicle.id == id).first()
+    if auction_vehicle is None:
+        raise HTTPException(status_code=404, detail="Auction vehicle not found")
+    db.delete(auction_vehicle)
+    db.commit()
+    return auction_vehicle
+
+
 app.include_router(users_router)
 app.include_router(vehicles_router)
 app.include_router(maintenance_router)
@@ -389,3 +492,4 @@ app.include_router(tasks_router)
 app.include_router(fueling_router)
 app.include_router(drivers_router)
 app.include_router(authorization)
+app.include_router(auction)

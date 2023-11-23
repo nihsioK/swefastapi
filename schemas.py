@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class LoginCredentials(BaseModel):
     username: str
@@ -93,9 +94,9 @@ class Vehicle(VehicleBase):
 
 # Fueling Request Models
 class FuelingRequestBase(BaseModel):
-    after_fueling_image: str
+    after_fueling_image: Optional[bytes] = None
     amount: float
-    before_fueling_image: str
+    before_fueling_image: Optional[bytes] = None
     created_at: str
     fueling_person_id: int
     gas_station: str
@@ -123,5 +124,21 @@ class DriverCreate(DriverBase):
     pass
 
 class Driver(DriverBase):
+    class Config:
+        orm_mode = True
+
+
+class AuctionVehicleCreate(BaseModel):
+    status: str
+    description: str
+    starting_bid: float
+    image: str
+    vehicle_id: int
+    bought_user: Optional[int] = None
+    final_price: Optional[float] = None
+
+class AuctionVehicleResponse(AuctionVehicleCreate):
+    id: int
+
     class Config:
         orm_mode = True

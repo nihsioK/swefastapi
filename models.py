@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DECIMAL, Text
+from sqlalchemy import Column, Integer, LargeBinary, String, Float, ForeignKey, DECIMAL, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -71,9 +71,9 @@ class FuelingRequest(Base):
     __tablename__ = "fuelingrequests"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    after_fueling_image = Column(Text)
+    after_fueling_image = Column(LargeBinary)
     amount = Column(DECIMAL)
-    before_fueling_image = Column(Text)
+    before_fueling_image = Column(LargeBinary)
     created_at = Column(String)
     fueling_person_id = Column(Integer, ForeignKey('users.id'))
     gas_station = Column(String)
@@ -91,3 +91,16 @@ class Driver(Base):
     vehicle_id = Column(Integer, ForeignKey('vehicles.id'), primary_key=True)
     user = relationship("User")
     vehicle = relationship("Vehicle")
+
+
+class AuctionVehicle(Base):
+    __tablename__ = "auction_vehicle"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    status = Column(String)
+    description = Column(String)
+    starting_bid = Column(DECIMAL)
+    image = Column(String)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), primary_key=True)
+    bought_user = Column(Integer, ForeignKey('users.id'), nullable=True)
+    final_price = Column(DECIMAL)
