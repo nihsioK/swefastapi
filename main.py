@@ -21,6 +21,8 @@ from auth import authenticate_user, create_access_token, get_current_user, Token
 from fastapi import APIRouter
 from models import AuctionVehicle as AuctionVehicle
 from schemas import AuctionVehicleResponse as AuctionVehicleResponse, AuctionVehicleCreate as AuctionVehicleCreate
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -44,6 +46,16 @@ authorization = APIRouter(tags=["Authorization"])
 auction = APIRouter(tags=["Auction"])
 
 app = FastAPI()
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Dependency for getting the DB session
 def get_db():
