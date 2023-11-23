@@ -71,9 +71,9 @@ class FuelingRequest(Base):
     __tablename__ = "fuelingrequests"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    after_fueling_image = Column(LargeBinary)
+    after_fueling_image = Column(String)
     amount = Column(DECIMAL)
-    before_fueling_image = Column(LargeBinary)
+    before_fueling_image = Column(String)
     created_at = Column(String)
     fueling_person_id = Column(Integer, ForeignKey('users.id'))
     gas_station = Column(String)

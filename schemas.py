@@ -34,7 +34,7 @@ class MaintenanceRequestBase(BaseModel):
     notes: str
     service_type: str
     status: str
-    total_cost: float
+    total_cost: Optional[float] = None
     vehicle_id: int
 
 class MaintenanceRequestCreate(MaintenanceRequestBase):
@@ -50,7 +50,7 @@ class MaintenanceRequest(MaintenanceRequestBase):
 class TaskBase(BaseModel):
     end_latitude: float
     end_longitude: float
-    end_time: str
+    end_time: Optional[str] = None
     notes: str
     start_latitude: float
     start_longitude: float
@@ -72,10 +72,10 @@ class VehicleBase(BaseModel):
     car_model: str
     color: str
     current_mileage: int
-    last_maintenance: str
+    last_maintenance: Optional[str] = None
     license_plate: str
     make: str
-    next_maintenance: str
+    next_maintenance: Optional[str] = None
     notes: str
     sitting_capacity: int
     status: str
@@ -94,15 +94,15 @@ class Vehicle(VehicleBase):
 
 # Fueling Request Models
 class FuelingRequestBase(BaseModel):
-    after_fueling_image: Optional[bytes] = None
+    after_fueling_image: Optional[str] = None
     amount: float
-    before_fueling_image: Optional[bytes] = None
+    before_fueling_image: str
     created_at: str
     fueling_person_id: int
     gas_station: str
     notes: str
     total_cost: float
-    updated_at: str
+    updated_at: Optional[str] = None
     vehicle_id: int
     status: str
 
